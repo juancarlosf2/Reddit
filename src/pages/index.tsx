@@ -1,32 +1,32 @@
 import { Box, Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/core";
-import { withUrqlClient } from "next-urql";
 import Layout from "../components/Layout";
 import { PostsQuery, useMeQuery, usePostsQuery } from "../generated/graphql";
-import { createUrqlClient } from "../utils/createUrqlClient";
 import NextLink from "next//link";
-import { useState } from "react";
 import UpdootSection from "../components/UpdootSection";
 import EditDeletePostButtons from "../components/EditDeletePostButtons";
+import { withApollo } from "../utils/withApollo";
 
 const Index = () => {
-  const [variables, setVariables] = useState({
-    limit: 15,
-    cursor: null as null | string,
-  });
-  const [{ data: meData }] = useMeQuery();
-  const [{ data, fetching }] = usePostsQuery({
-    variables,
+  const { data: meData } = useMeQuery();
+  const { data, loading, fetchMore, variables } = usePostsQuery({
+    variables: {
+      limit: 15,
+      cursor: null as null,
+    },
+    notifyOnNetworkStatusChange: true,
   });
 
   const loadMorePosts = (data: PostsQuery) => {
     const { posts } = data.posts;
-    setVariables({
-      limit: variables.limit,
-      cursor: posts[posts.length - 1].createdAt,
+    fetchMore({
+      variables: {
+        limit: variables?.limit,
+        cursor: posts[posts.length - 1].createdAt,
+      },
     });
   };
 
-  if (!fetching && !data) {
+  if (!loading && !data) {
     return <div>you got query failed for some reason</div>;
   }
   return (
@@ -35,7 +35,7 @@ const Index = () => {
         <Heading>News feed</Heading>
       </Flex>
       <br />
-      {!data && fetching ? (
+      {!data && loading ? (
         <div>loading...</div>
       ) : (
         <Stack spacing={8} mb={8}>
@@ -68,7 +68,12 @@ const Index = () => {
       )}
       {data && data.posts.hasMore ? (
         <Flex>
-          <Button onClick={() => loadMorePosts(data)} m="auto" mb={8}>
+          <Button
+            onClick={() => loadMorePosts(data)}
+            isLoading={loading}
+            m="auto"
+            mb={8}
+          >
             Load more posts
           </Button>
         </Flex>
@@ -77,4 +82,4 @@ const Index = () => {
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(Index);
+export default withApollo({ ssr: true })(Index);

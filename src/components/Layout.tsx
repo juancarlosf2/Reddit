@@ -1,4 +1,4 @@
-import React, { ReactElement } from "react";
+import React from "react";
 import NavBar from "./NavBar";
 import Wrapper, { WrapperVariant } from "./Wrapper";
 

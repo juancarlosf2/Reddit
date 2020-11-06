@@ -1,16 +1,59 @@
 import React, { ReactElement, useState } from "react";
 import { Flex, IconButton } from "@chakra-ui/core";
-import { PostSnippetFragment, useVoteMutation } from "../generated/graphql";
-
+import {
+  PostSnippetFragment,
+  useVoteMutation,
+  VoteMutation,
+} from "../generated/graphql";
+import gql from "graphql-tag";
+import { ApolloCache } from "@apollo/client";
 interface Props {
   post: PostSnippetFragment;
 }
 
 function UpdootSection({ post }: Props): ReactElement {
-  const [, vote] = useVoteMutation();
+  const [vote] = useVoteMutation();
   const [loadingState, setLoadingState] = useState<
     "updoot-loading" | "downdoot-loading" | "not-loading"
   >("not-loading");
+
+  const updateAfterVote = (
+    value: number,
+    postId: number,
+    cache: ApolloCache<VoteMutation>
+  ) => {
+    const data = cache.readFragment<{
+      id: number;
+      points: number;
+      voteStatus: number | null;
+    }>({
+      id: "Post:" + postId,
+      fragment: gql`
+        fragment _ on Post {
+          id
+          points
+          voteStatus
+        }
+      `,
+    });
+    if (data) {
+      if (data.voteStatus === value) {
+        return;
+      }
+      const newPoints =
+        (data.points as number) + (!data.voteStatus ? 1 : 2) * value;
+      cache.writeFragment({
+        id: "Post:" + postId,
+        fragment: gql`
+          fragment _ on Post {
+            points
+            voteStatus
+          }
+        `,
+        data: { points: newPoints, voteStatus: value },
+      });
+    }
+  };
   const handleVote = async (upOrDown: "up" | "down") => {
     const value = upOrDown === "up" ? 1 : -1;
     if (value === 1) {
@@ -19,11 +62,17 @@ function UpdootSection({ post }: Props): ReactElement {
       setLoadingState("downdoot-loading");
     }
     await vote({
-      postId: post.id,
-      value: value,
+      variables: {
+        postId: post.id,
+        value: value,
+      },
+      update: (cache) => {
+        updateAfterVote(value, post.id, cache);
+      },
     });
     setLoadingState("not-loading");
   };
+
   return (
     <Flex direction="column" alignItems="center" mr={4} justifyContent="center">
       <IconButton

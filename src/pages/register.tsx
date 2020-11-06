@@ -3,23 +3,32 @@ import { Form, Formik } from "formik";
 import React, { ReactElement } from "react";
 import InputField from "../components/InputField";
 import Wrapper from "../components/Wrapper";
-import { useRegisterMutation } from "../generated/graphql";
+import { MeDocument, MeQuery, useRegisterMutation } from "../generated/graphql";
 import { toErrorMap } from "../utils/toErrorMap";
 import { useRouter } from "next/router";
-import { withUrqlClient } from "next-urql";
-import { createUrqlClient } from "../utils/createUrqlClient";
+import { withApollo } from "../utils/withApollo";
 interface Props {}
 
-function register({}: Props): ReactElement {
+function Register({}: Props): ReactElement {
   const router = useRouter();
-  const [, register] = useRegisterMutation();
+  const [register] = useRegisterMutation();
   return (
     <Wrapper variant="small">
       <Formik
         initialValues={{ email: "", username: "", password: "" }}
         onSubmit={async (values, { setErrors }) => {
-          console.log(values);
-          const { data } = await register({ options: values });
+          const { data } = await register({
+            variables: { options: values },
+            update: (cache, { data: mutationData }) => {
+              cache.writeQuery<MeQuery>({
+                query: MeDocument,
+                data: {
+                  __typename: "Query",
+                  me: mutationData?.register.user,
+                },
+              });
+            },
+          });
           if (data?.register.errors) {
             setErrors(toErrorMap(data.register.errors));
           } else if (data?.register.user) {
@@ -35,11 +44,7 @@ function register({}: Props): ReactElement {
               label="Username"
             />
             <Box mt={4}>
-              <InputField
-                name="email"
-                placeholder="email"
-                label="email"
-              />
+              <InputField name="email" placeholder="email" label="email" />
             </Box>
             <Box mt={4}>
               <InputField
@@ -65,4 +70,4 @@ function register({}: Props): ReactElement {
   );
 }
 
-export default withUrqlClient(createUrqlClient)(register);
+export default withApollo({ ssr: true })(Register);
