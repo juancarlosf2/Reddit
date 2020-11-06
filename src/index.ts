@@ -1,5 +1,7 @@
-import { createUserLoader } from "./utils/createUserLoader";
 import "reflect-metadata";
+import "dotenv-safe/config";
+import { createUpdootLoader } from "./utils/createUpdootLoader";
+import { createUserLoader } from "./utils/createUserLoader";
 import { User } from "./entities/User";
 import { Post } from "./entities/Post";
 import { UserResolver } from "./resolvers/user";
@@ -16,30 +18,28 @@ import cors from "cors";
 import { createConnection } from "typeorm";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+
 const main = async () => {
   const conn = await createConnection({
     type: "postgres",
-    database: "lireddit2",
-    username: "postgres",
-    password: "1221",
+    url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: true,
+    // synchronize: true,
     entities: [Post, User, Updoot],
     migrations: [path.join(__dirname, "./migrations/*")],
-    // cli: {
-    //   migrationsDir: "./src/migrations/*",
-    // },
   });
+
   await conn.runMigrations();
-  // await conn.undoLastMigration;
+
   // await Post.delete({});
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redis = new Redis();
+  const redis = new Redis(process.env.REDIS_URL);
+  app.set("trust proxy", 1);
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: process.env.CORS_ORIGIN,
       credentials: true,
     })
   );
@@ -55,8 +55,9 @@ const main = async () => {
         httpOnly: true,
         sameSite: "lax", // csrf look in google pls
         secure: __prod__, //cookie only works in https
+        domain: __prod__ ? ".lightreddit.xyz" : undefined,
       },
-      secret: "thisisarandomstring",
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
     })
@@ -72,6 +73,7 @@ const main = async () => {
       res,
       redis,
       userLoader: createUserLoader(),
+      updootLoader: createUpdootLoader(),
     }),
   });
 
@@ -80,7 +82,7 @@ const main = async () => {
     cors: false,
   });
 
-  app.listen(4000, () => {
+  app.listen(parseInt(process.env.PORT), () => {
     console.log("server started on localhost:4000");
   });
 };

@@ -12,8 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const createUserLoader_1 = require("./utils/createUserLoader");
 require("reflect-metadata");
+require("dotenv-safe/config");
+const createUpdootLoader_1 = require("./utils/createUpdootLoader");
+const createUserLoader_1 = require("./utils/createUserLoader");
 const User_1 = require("./entities/User");
 const Post_1 = require("./entities/Post");
 const user_1 = require("./resolvers/user");
@@ -33,20 +35,18 @@ const Updoot_1 = require("./entities/Updoot");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const conn = yield typeorm_1.createConnection({
         type: "postgres",
-        database: "lireddit2",
-        username: "postgres",
-        password: "1221",
+        url: process.env.DATABASE_URL,
         logging: true,
-        synchronize: true,
         entities: [Post_1.Post, User_1.User, Updoot_1.Updoot],
         migrations: [path_1.default.join(__dirname, "./migrations/*")],
     });
     yield conn.runMigrations();
     const app = express_1.default();
     const RedisStore = connect_redis_1.default(express_session_1.default);
-    const redis = new ioredis_1.default();
+    const redis = new ioredis_1.default(process.env.REDIS_URL);
+    app.set("trust proxy", 1);
     app.use(cors_1.default({
-        origin: "http://localhost:3000",
+        origin: process.env.CORS_ORIGIN,
         credentials: true,
     }));
     app.use(express_session_1.default({
@@ -60,8 +60,9 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             httpOnly: true,
             sameSite: "lax",
             secure: constants_1.__prod__,
+            domain: constants_1.__prod__ ? ".lightreddit.xyz" : undefined,
         },
-        secret: "thisisarandomstring",
+        secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
     }));
@@ -75,13 +76,14 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             res,
             redis,
             userLoader: createUserLoader_1.createUserLoader(),
+            updootLoader: createUpdootLoader_1.createUpdootLoader(),
         }),
     });
     apolloServer.applyMiddleware({
         app,
         cors: false,
     });
-    app.listen(4000, () => {
+    app.listen(parseInt(process.env.PORT), () => {
         console.log("server started on localhost:4000");
     });
 });

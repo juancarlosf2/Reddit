@@ -17,27 +17,22 @@ const Post_1 = require("./Post");
 let Updoot = class Updoot extends typeorm_1.BaseEntity {
 };
 __decorate([
-    type_graphql_1.Field(),
     typeorm_1.Column({ type: "int" }),
     __metadata("design:type", Number)
 ], Updoot.prototype, "value", void 0);
 __decorate([
-    type_graphql_1.Field(),
     typeorm_1.PrimaryColumn(),
     __metadata("design:type", Number)
 ], Updoot.prototype, "userId", void 0);
 __decorate([
-    type_graphql_1.Field(() => User_1.User),
     typeorm_1.ManyToOne(() => User_1.User, (user) => user.updoots),
     __metadata("design:type", User_1.User)
 ], Updoot.prototype, "user", void 0);
 __decorate([
-    type_graphql_1.Field(),
     typeorm_1.PrimaryColumn(),
     __metadata("design:type", Number)
 ], Updoot.prototype, "postId", void 0);
 __decorate([
-    type_graphql_1.Field(),
     typeorm_1.ManyToOne(() => Post_1.Post, (post) => post.updoots, {
         onDelete: "CASCADE",
     }),
