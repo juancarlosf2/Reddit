@@ -1,16 +1,29 @@
-import { ApolloClient, InMemoryCache } from "@apollo/client";
+import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
 import { createWithApollo } from "./createWithApollo";
 import { PaginatedPosts } from "../generated/graphql";
 import { NextPageContext } from "next";
+import { isServer } from "./isServer";
+import { onError } from "@apollo/client/link/error";
+import Router from "next/router";
+
+const authErrorLink = onError(({ graphQLErrors }) => {
+  console.log(graphQLErrors ? graphQLErrors[0] : null);
+  if (graphQLErrors && graphQLErrors[0].message.includes("not authenticated")) {
+    Router.replace("/login");
+  }
+});
+
+const httpLink = new HttpLink({
+  uri: process.env.NEXT_PUBLIC_API_URL as string,
+  credentials: "include",
+});
 
 const createClient = (ctx: NextPageContext) =>
   new ApolloClient({
-    uri: process.env.NEXT_PUBLIC_API_URL as string,
     headers: {
-      cookie:
-        (typeof window === "undefined" ? ctx.req?.headers.cookie : undefined) ||
-        "",
+      cookie: (isServer() ? ctx.req?.headers.cookie : undefined) || "",
     },
+    link: authErrorLink.concat(httpLink),
     cache: new InMemoryCache({
       typePolicies: {
         Query: {
@@ -31,7 +44,7 @@ const createClient = (ctx: NextPageContext) =>
         },
       },
     }),
-    credentials: "include",
+    // credentials: "include",
   });
 
 export const withApollo = createWithApollo(createClient);
