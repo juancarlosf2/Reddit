@@ -12,6 +12,7 @@ node_modules
 storybook-static
 _
 .env.local
+<<<<<<< HEAD
 yarn-error.log
 
 dist
@@ -21,3 +22,13 @@ dist
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+=======
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+.vercel
+>>>>>>> 1b46ec9 (changed from urql client to apollo client)
